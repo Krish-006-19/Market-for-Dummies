@@ -574,19 +574,20 @@ export default function StockInfo() {
               >
                 {sipActive ? "SIP Running" : "SIP Stopped"}
               </div>
-              {sipActive && sipData?.isActive && sipData?.nextdate && (
-                <div className="mt-3 rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-3">
-                  <p className="text-xs text-slate-400">Next SIP Payment</p>
-                  <p className="text-cyan-300 font-semibold">
-                    {new Date(sipData.nextdate).toLocaleDateString("en-IN", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
-                  </p>
-                </div>
-              )}
             </div>
+
+            {sipActive && sipData?.isActive && sipData?.nextdate && (
+              <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-3">
+                <p className="text-xs text-slate-400">Next SIP Payment</p>
+                <p className="text-cyan-300 font-semibold">
+                  {new Date(sipData.nextdate).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </p>
+              </div>
+            )}
 
             <div className="flex flex-col md:flex-row gap-3 md:items-center">
               {sipMode === "sip" ? (
