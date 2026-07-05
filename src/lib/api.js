@@ -1,7 +1,5 @@
 export const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-/* ================= Cookies ================= */
-
 export const setCookie = (name, value, hours = 1) => {
   const d = new Date();
   d.setTime(d.getTime() + hours * 60 * 60 * 1000);
@@ -21,10 +19,7 @@ export const removeCookie = (name) => {
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
 };
 
-/* backward compatibility (fixes your current crashes) */
 export const deleteCookie = removeCookie;
-
-/* ================= Auth ================= */
 
 export const isTokenExpired = (token) => {
   try {
