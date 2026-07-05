@@ -28,7 +28,6 @@ function Signin() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
-  // ONLY RULE: min 6 chars
   const validatePassword = (password) => {
     return password.length >= 6;
   };
