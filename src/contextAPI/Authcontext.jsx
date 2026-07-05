@@ -18,7 +18,6 @@ import {
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  /* ================= STATE ================= */
 
   const [token, setToken] = useState(() => {
     const savedToken = getCookie("token");
@@ -28,10 +27,8 @@ export const AuthProvider = ({ children }) => {
   const [userId, setUserId] = useState(() => getCookie("userId") || null);
   const [authReady, setAuthReady] = useState(false);
 
-  // Ref to hold the navigate function injected from outside (set by App)
   const navigateRef = useRef(null);
 
-  /* ================= HELPERS ================= */
 
   const clearAuth = (redirect = true) => {
     setToken(null);
@@ -53,17 +50,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  /* ================= TOKEN EFFECT ================= */
 
   useEffect(() => {
     if (!token) {
-      clearAuth(false); // already logged out, don't redirect in effect
+      clearAuth(false);
       return;
     }
 
     const expiryMs = getExpiryMs(token);
 
-    // persist cookie (fallback 1h)
     setCookie("token", token, 1);
 
     axios.defaults.headers.common.Authorization = `Bearer ${token}`;
@@ -75,17 +70,15 @@ export const AuthProvider = ({ children }) => {
       const logoutAt = Math.max(expiryMs - Date.now() - refreshLeadMs, 0);
 
       timerId = window.setTimeout(() => {
-        clearAuth(true); // redirect to /signin when token expires
+        clearAuth(true);
       }, logoutAt);
     }
 
     return () => {
       if (timerId) window.clearTimeout(timerId);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  /* ================= USER EFFECT ================= */
 
   useEffect(() => {
     if (!userId) {
@@ -96,7 +89,6 @@ export const AuthProvider = ({ children }) => {
     setCookie("userId", userId, 1);
   }, [userId]);
 
-  /* ================= INIT LOAD ================= */
 
   useEffect(() => {
     const savedToken = getCookie("token");
@@ -110,10 +102,8 @@ export const AuthProvider = ({ children }) => {
     }
 
     setAuthReady(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ================= AUTH FUNCTIONS ================= */
 
   const login = async (email, password) => {
     try {
@@ -162,18 +152,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    clearAuth(false); // caller (Navbar) handles navigation
+    clearAuth(false);
     setToken(null);
     setUserId(null);
   };
 
-  /* ================= MEMO ================= */
-
   const isAuthenticated = useMemo(() => {
     return Boolean(token) && !isTokenExpired(token);
   }, [token]);
-
-  /* ================= PROVIDER ================= */
 
   return (
     <AuthContext.Provider
