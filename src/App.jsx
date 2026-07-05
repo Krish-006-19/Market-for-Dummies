@@ -14,7 +14,6 @@ import Leaderboard from "./Features/Leaderboard";
 import TradeHistory from "./Features/TradeHistory";
 import RequireAuth from "./components/RequireAuth";
 
-// Injects navigate into AuthContext so it can redirect on token expiry
 function NavigateInjector() {
   const navigate = useNavigate();
   const { navigateRef } = useContext(AuthContext);
