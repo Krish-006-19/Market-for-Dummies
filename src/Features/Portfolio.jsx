@@ -49,7 +49,6 @@ function Portfolio() {
   return (
     <div className="min-h-screen spg overflow-hidden bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-gray-900 dark:text-gray-100 font-sans transition duration-500">
       
-      {/* Cursor glow */}
       <div
         className="pointer-events-none fixed top-0 left-0 w-full h-full z-0"
         style={{
@@ -59,7 +58,6 @@ function Portfolio() {
 
       <Navbar />
 
-      {/* MAIN */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-8 relative z-1">
 
         <div>
@@ -75,7 +73,6 @@ function Portfolio() {
           <p className="text-red-400">{error}</p>
         ) : (
           <>
-            {/* SUMMARY CARDS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-white/5 border border-white/10 rounded-xl p-5">
                 <p className="text-slate-400 text-sm">Current Budget</p>
@@ -95,7 +92,6 @@ function Portfolio() {
               </div>
             </div>
 
-            {/* HOLDINGS */}
             <div className="space-y-4">
               <h3 className="text-xl font-semibold">Holdings</h3>
 
@@ -121,9 +117,6 @@ function Portfolio() {
                         <tr key={i} className="hover:bg-white/5 transition">
                           <td className="px-4 py-3">{f.symbol}</td>
                           <td className="px-4 py-3">{f.units}</td>
-                          {/* <td className="px-4 py-3">
-                            ₹{f.units ? (f.investedValue / f.units).toFixed(2) : "0.00"}
-                          </td> */}
                           <td className="px-4 py-3">₹{f.nav}</td>
                           <td className="px-4 py-3">₹{f.investedValue}</td>
                           <td className="px-4 py-3">₹{f.currentValue}</td>
