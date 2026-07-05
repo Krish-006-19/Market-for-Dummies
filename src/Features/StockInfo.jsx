@@ -104,8 +104,6 @@ export default function StockInfo() {
   const [loading, setLoading] = useState(true);
 
   const [portfolioData, setPortfolioData] = useState(null);
-  // Scoped by userId so different accounts on the same browser never read
-  // or overwrite each other's SIP UI state for the same fund symbol.
   const storageKey = `sip-ui-${userId || "guest"}-${symbol}`;
 
   const [showSipControls, setShowSipControls] = useState(() => {
