@@ -22,8 +22,6 @@ function Leaderboard() {
 
     const fetchLeaderboard = async () => {
       try {
-        // GET /leaderboard requires auth and returns
-        // [{ username, totalValue, remainingBalance }]
         const res = await axios.get(`${API_BASE_URL}/leaderboard`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -46,7 +44,6 @@ function Leaderboard() {
           };
         });
 
-        // Backend already sorts by totalValue desc, but keep this stable.
         mapped.sort((a, b) => b.totalValue - a.totalValue);
         setLeaderboard(mapped);
       } catch (err) {
@@ -98,7 +95,6 @@ function Leaderboard() {
           </p>
         ) : (
           <>
-            {/* Summary cards */}
             <section className="grid gap-4 md:grid-cols-3">
               <div className="rounded-2xl border border-white/20 dark:border-slate-700/40 bg-white/60 dark:bg-slate-800/50 backdrop-blur-lg p-5 shadow-lg">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Top trader</p>
@@ -119,7 +115,6 @@ function Leaderboard() {
               </div>
             </section>
 
-            {/* Full table */}
             <section className="rounded-3xl border border-white/20 dark:border-slate-700/40 bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl p-6 shadow-2xl">
               <div className="mb-4">
                 <h3 className="text-2xl font-bold">All Rankings</h3>
