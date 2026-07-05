@@ -13,13 +13,11 @@ function Navbar() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Delete confirm state
   const [deleteError, setDeleteError] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const dropdownRef = useRef(null);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -30,7 +28,6 @@ function Navbar() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Close the mobile menu whenever the viewport grows back to desktop size
   useEffect(() => {
     const onResize = () => {
       if (window.innerWidth >= 768) setMobileMenuOpen(false);
@@ -167,7 +164,6 @@ function Navbar() {
           </div>
         </div>
 
-        {/* Mobile / tablet dropdown panel */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-white/20 dark:border-slate-700/30 bg-white/70 dark:bg-slate-900/80 backdrop-blur-xl">
             <ul className="px-4 sm:px-6 py-3 space-y-1 font-medium">
