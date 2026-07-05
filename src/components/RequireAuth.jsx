@@ -6,7 +6,6 @@ function RequireAuth({ children }) {
   const { isAuthenticated, authReady } = useContext(AuthContext);
   const location = useLocation();
 
-  // Wait for auth to initialise before deciding
   if (!authReady) return null;
 
   if (!isAuthenticated) {
