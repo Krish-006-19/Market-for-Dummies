@@ -60,7 +60,7 @@ function Leaderboard() {
   const totalValue = leaderboard.reduce((s, p) => s + p.totalValue, 0);
 
   return (
-    <div className="min-h-screen spg overflow-hidden bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-gray-900 dark:text-gray-100 font-sans transition duration-500">
+    <div className="min-h-screen spg  bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-gray-900 dark:text-gray-100 font-sans transition duration-500">
       <div
         className="pointer-events-none fixed top-0 left-0 w-full h-full z-0"
         style={{
