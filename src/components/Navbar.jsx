@@ -350,7 +350,7 @@ function Navbar() {
   return (
     <>
       {/* Fixed Navbar */}
-      <nav className="fixed pt-20 top-0 left-0 right-0 z-50 backdrop-blur-lg bg-white/30 dark:bg-slate-800/30 border-b border-white/20 dark:border-slate-700/20 shadow-md">
+      <nav className="fixed mb-20 top-0 left-0 right-0 z-50 backdrop-blur-lg bg-white/30 dark:bg-slate-800/30 border-b border-white/20 dark:border-slate-700/20 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center gap-3">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent cursor-pointer truncate">
             <Link to={isAuthenticated ? "/home" : "/"}>
