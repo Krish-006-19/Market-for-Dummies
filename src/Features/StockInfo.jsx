@@ -126,10 +126,7 @@
 //     return saved ? JSON.parse(saved).sellUnits : "";
 //   });
 
-//   const [sipActive, setSipActive] = useState(() => {
-//     const saved = localStorage.getItem(storageKey);
-//     return saved ? JSON.parse(saved).sipActive : false;
-//   });
+//   const [sipActive, setSipActive] = useState(false);
 //   const [txState, setTxState] = useState("idle");
 //   const [txMessage, setTxMessage] = useState("");
 //   const [selectedRange, setSelectedRange] = useState("Max");
@@ -219,11 +216,13 @@
 //   const hasUnits = currentUnits > 0;
 
 //   useEffect(() => {
-//     const backendActive = currentFund?.active ?? currentFund?.sipActive;
-
-//     if (typeof backendActive === "boolean") {
-//       setSipActive(backendActive);
-//     }
+//     // The portfolio endpoint's `funds` entries never carry an `active`/
+//     // `sipActive` flag (see portfolio.models.js) — the real source of truth
+//     // for SIP status is the /sip/:schemeCode response (`sipData`). Deriving
+//     // from that instead of localStorage means this is correct on any device,
+//     // not just the one that last touched this SIP.
+//     const backendActive = sipData?.isActive === true;
+//     setSipActive(backendActive);
 
 //     if (hasUnits || backendActive) {
 //       setShowSipControls(true);
@@ -231,7 +230,7 @@
 //       setShowSipControls(false);
 //       setSipMode("sip");
 //     }
-//   }, [currentFund?.active, currentFund?.sipActive, hasUnits]);
+//   }, [sipData, hasUnits]);
 
 //   const visibleHistory = useMemo(() => {
 //     if (!history.length) return [];
@@ -758,6 +757,36 @@ const sanitizeDecimalInput = (value) => {
   return next;
 };
 
+// Colors used to reflect whether the fund is up or down over the
+// currently-selected time range. Centralized here so the stat card,
+// the chart line/fill, and the range-button highlight all agree.
+const TREND_COLORS = {
+  up: {
+    text: "#34d399", // emerald-400
+    line: "#34d399",
+    fill: "rgba(52,211,153,0.08)",
+    badgeBorder: "border-emerald-400/30",
+    badgeText: "text-emerald-300",
+    badgeBg: "bg-emerald-500/10",
+  },
+  down: {
+    text: "#f87171", // red-400
+    line: "#f87171",
+    fill: "rgba(248,113,113,0.08)",
+    badgeBorder: "border-red-400/30",
+    badgeText: "text-red-300",
+    badgeBg: "bg-red-500/10",
+  },
+  neutral: {
+    text: "#94a3b8",
+    line: "#22d3ee",
+    fill: "rgba(34,211,238,0.03)",
+    badgeBorder: "border-slate-500/30",
+    badgeText: "text-slate-300",
+    badgeBg: "bg-white/5",
+  },
+};
+
 const yellowDiamondPlugin = {
   id: "yellowDiamond",
   afterDatasetsDraw(chart) {
@@ -947,13 +976,43 @@ export default function StockInfo() {
 
   const latestPoint = history.at(-1);
 
+  // Return over the currently-selected timeline: compares the NAV at the
+  // start of the visible window (x) against the NAV at the end (x ± y,
+  // where y is whatever the fund actually moved — not a fixed amount).
+  // isUp === false -> red, isUp === true -> green, null -> not enough data.
+  const periodReturn = useMemo(() => {
+    if (visibleHistory.length < 2) return null;
+
+    const startNav = visibleHistory[0].y;
+    const endNav = visibleHistory.at(-1).y;
+
+    if (!Number.isFinite(startNav) || startNav === 0) return null;
+
+    const diff = endNav - startNav; // this is "y" — can be any real number, +/-
+    const pct = (diff / startNav) * 100;
+
+    return {
+      startNav,
+      endNav,
+      diff,
+      pct,
+      isUp: diff >= 0,
+    };
+  }, [visibleHistory]);
+
+  const trend = periodReturn
+    ? periodReturn.isUp
+      ? TREND_COLORS.up
+      : TREND_COLORS.down
+    : TREND_COLORS.neutral;
+
   const chartData = {
     datasets: [
       {
         data: visibleHistory,
         parsing: { xAxisKey: "x", yAxisKey: "y" },
-        borderColor: "#22d3ee",
-        backgroundColor: "rgba(34,211,238,0.03)",
+        borderColor: trend.line,
+        backgroundColor: trend.fill,
         fill: true,
         tension: 0.25,
         pointRadius: 0,
@@ -1189,7 +1248,7 @@ export default function StockInfo() {
           <p className="text-slate-400 text-sm">Scheme Code: {symbol}</p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="bg-white/5 p-4 rounded-xl border border-white/10">
             <p className="text-xs text-slate-400">Latest NAV</p>
             <p className="text-cyan-300 font-semibold">
@@ -1223,6 +1282,23 @@ export default function StockInfo() {
               }
             >
               {txMessage || (sipActive ? "SIP active" : "Idle")}
+            </p>
+          </div>
+
+          <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+            <p className="text-xs text-slate-400">{selectedRange} Return</p>
+            <p
+              className="font-semibold"
+              style={{ color: trend.text }}
+              title={
+                periodReturn
+                  ? `₹${periodReturn.startNav.toFixed(2)} → ₹${periodReturn.endNav.toFixed(2)}`
+                  : undefined
+              }
+            >
+              {periodReturn
+                ? `${periodReturn.isUp ? "+" : ""}${periodReturn.diff.toFixed(2)} (${periodReturn.isUp ? "+" : ""}${periodReturn.pct.toFixed(2)}%)`
+                : "N/A"}
             </p>
           </div>
         </div>
@@ -1355,7 +1431,7 @@ export default function StockInfo() {
           </div>
         )}
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           {RANGE_OPTIONS.map((range) => (
             <button
               key={range.label}
@@ -1369,6 +1445,16 @@ export default function StockInfo() {
               {range.label}
             </button>
           ))}
+
+          {periodReturn && (
+            <span
+              className={`ml-2 text-xs px-3 py-1 rounded-full border ${trend.badgeBorder} ${trend.badgeText} ${trend.badgeBg}`}
+            >
+              {periodReturn.isUp ? "▲" : "▼"}{" "}
+              {periodReturn.isUp ? "+" : ""}
+              {periodReturn.pct.toFixed(2)}%
+            </span>
+          )}
         </div>
 
         <div className="h-[300px] sm:h-[360px] md:h-[420px] bg-white/5 border border-white/10 rounded-xl p-4">
