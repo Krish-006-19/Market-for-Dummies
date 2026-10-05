@@ -61,6 +61,36 @@
 //   return next;
 // };
 
+// // Colors used to reflect whether the fund is up or down over the
+// // currently-selected time range. Centralized here so the stat card,
+// // the chart line/fill, and the range-button highlight all agree.
+// const TREND_COLORS = {
+//   up: {
+//     text: "#34d399", // emerald-400
+//     line: "#34d399",
+//     fill: "rgba(52,211,153,0.08)",
+//     badgeBorder: "border-emerald-400/30",
+//     badgeText: "text-emerald-300",
+//     badgeBg: "bg-emerald-500/10",
+//   },
+//   down: {
+//     text: "#f87171", // red-400
+//     line: "#f87171",
+//     fill: "rgba(248,113,113,0.08)",
+//     badgeBorder: "border-red-400/30",
+//     badgeText: "text-red-300",
+//     badgeBg: "bg-red-500/10",
+//   },
+//   neutral: {
+//     text: "#94a3b8",
+//     line: "#22d3ee",
+//     fill: "rgba(34,211,238,0.03)",
+//     badgeBorder: "border-slate-500/30",
+//     badgeText: "text-slate-300",
+//     badgeBg: "bg-white/5",
+//   },
+// };
+
 // const yellowDiamondPlugin = {
 //   id: "yellowDiamond",
 //   afterDatasetsDraw(chart) {
@@ -250,13 +280,43 @@
 
 //   const latestPoint = history.at(-1);
 
+//   // Return over the currently-selected timeline: compares the NAV at the
+//   // start of the visible window (x) against the NAV at the end (x ± y,
+//   // where y is whatever the fund actually moved — not a fixed amount).
+//   // isUp === false -> red, isUp === true -> green, null -> not enough data.
+//   const periodReturn = useMemo(() => {
+//     if (visibleHistory.length < 2) return null;
+
+//     const startNav = visibleHistory[0].y;
+//     const endNav = visibleHistory.at(-1).y;
+
+//     if (!Number.isFinite(startNav) || startNav === 0) return null;
+
+//     const diff = endNav - startNav; // this is "y" — can be any real number, +/-
+//     const pct = (diff / startNav) * 100;
+
+//     return {
+//       startNav,
+//       endNav,
+//       diff,
+//       pct,
+//       isUp: diff >= 0,
+//     };
+//   }, [visibleHistory]);
+
+//   const trend = periodReturn
+//     ? periodReturn.isUp
+//       ? TREND_COLORS.up
+//       : TREND_COLORS.down
+//     : TREND_COLORS.neutral;
+
 //   const chartData = {
 //     datasets: [
 //       {
 //         data: visibleHistory,
 //         parsing: { xAxisKey: "x", yAxisKey: "y" },
-//         borderColor: "#22d3ee",
-//         backgroundColor: "rgba(34,211,238,0.03)",
+//         borderColor: trend.line,
+//         backgroundColor: trend.fill,
 //         fill: true,
 //         tension: 0.25,
 //         pointRadius: 0,
@@ -492,7 +552,7 @@
 //           <p className="text-slate-400 text-sm">Scheme Code: {symbol}</p>
 //         </div>
 
-//         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+//         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
 //           <div className="bg-white/5 p-4 rounded-xl border border-white/10">
 //             <p className="text-xs text-slate-400">Latest NAV</p>
 //             <p className="text-cyan-300 font-semibold">
@@ -526,6 +586,23 @@
 //               }
 //             >
 //               {txMessage || (sipActive ? "SIP active" : "Idle")}
+//             </p>
+//           </div>
+
+//           <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+//             <p className="text-xs text-slate-400">{selectedRange} Return</p>
+//             <p
+//               className="font-semibold"
+//               style={{ color: trend.text }}
+//               title={
+//                 periodReturn
+//                   ? `₹${periodReturn.startNav.toFixed(2)} → ₹${periodReturn.endNav.toFixed(2)}`
+//                   : undefined
+//               }
+//             >
+//               {periodReturn
+//                 ? `${periodReturn.isUp ? "+" : ""}${periodReturn.diff.toFixed(2)} (${periodReturn.isUp ? "+" : ""}${periodReturn.pct.toFixed(2)}%)`
+//                 : "N/A"}
 //             </p>
 //           </div>
 //         </div>
@@ -658,7 +735,7 @@
 //           </div>
 //         )}
 
-//         <div className="flex flex-wrap gap-2">
+//         <div className="flex flex-wrap gap-2 items-center">
 //           {RANGE_OPTIONS.map((range) => (
 //             <button
 //               key={range.label}
@@ -672,6 +749,16 @@
 //               {range.label}
 //             </button>
 //           ))}
+
+//           {periodReturn && (
+//             <span
+//               className={`ml-2 text-xs px-3 py-1 rounded-full border ${trend.badgeBorder} ${trend.badgeText} ${trend.badgeBg}`}
+//             >
+//               {periodReturn.isUp ? "▲" : "▼"}{" "}
+//               {periodReturn.isUp ? "+" : ""}
+//               {periodReturn.pct.toFixed(2)}%
+//             </span>
+//           )}
 //         </div>
 
 //         <div className="h-[300px] sm:h-[360px] md:h-[420px] bg-white/5 border border-white/10 rounded-xl p-4">
@@ -691,6 +778,7 @@
 //     </div>
 //   );
 // }
+
 
 
 
@@ -757,34 +845,9 @@ const sanitizeDecimalInput = (value) => {
   return next;
 };
 
-// Colors used to reflect whether the fund is up or down over the
-// currently-selected time range. Centralized here so the stat card,
-// the chart line/fill, and the range-button highlight all agree.
-const TREND_COLORS = {
-  up: {
-    text: "#34d399", // emerald-400
-    line: "#34d399",
-    fill: "rgba(52,211,153,0.08)",
-    badgeBorder: "border-emerald-400/30",
-    badgeText: "text-emerald-300",
-    badgeBg: "bg-emerald-500/10",
-  },
-  down: {
-    text: "#f87171", // red-400
-    line: "#f87171",
-    fill: "rgba(248,113,113,0.08)",
-    badgeBorder: "border-red-400/30",
-    badgeText: "text-red-300",
-    badgeBg: "bg-red-500/10",
-  },
-  neutral: {
-    text: "#94a3b8",
-    line: "#22d3ee",
-    fill: "rgba(34,211,238,0.03)",
-    badgeBorder: "border-slate-500/30",
-    badgeText: "text-slate-300",
-    badgeBg: "bg-white/5",
-  },
+const parseAssetPct = (value) => {
+  const n = parseFloat(String(value ?? "").replace("%", ""));
+  return Number.isFinite(n) ? n : 0;
 };
 
 const yellowDiamondPlugin = {
@@ -821,7 +884,7 @@ const getFundFromPortfolio = (portfolio, symbol) => {
 
 export default function StockInfo() {
   const { cursorPos } = useContext(CursorContext);
-  const { token, userId } = useContext(AuthContext);
+  const { token } = useContext(AuthContext);
   const { symbol } = useParams();
   const navigate = useNavigate();
 
@@ -829,8 +892,11 @@ export default function StockInfo() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [holdings, setHoldings] = useState([]);
+  const [holdingsLoading, setHoldingsLoading] = useState(true);
+
   const [portfolioData, setPortfolioData] = useState(null);
-  const storageKey = `sip-ui-${userId || "guest"}-${symbol}`;
+  const storageKey = `sip-ui-${symbol}`;
 
   const [showSipControls, setShowSipControls] = useState(() => {
     const saved = localStorage.getItem(storageKey);
@@ -852,7 +918,10 @@ export default function StockInfo() {
     return saved ? JSON.parse(saved).sellUnits : "";
   });
 
-  const [sipActive, setSipActive] = useState(false);
+  const [sipActive, setSipActive] = useState(() => {
+    const saved = localStorage.getItem(storageKey);
+    return saved ? JSON.parse(saved).sipActive : false;
+  });
   const [txState, setTxState] = useState("idle");
   const [txMessage, setTxMessage] = useState("");
   const [selectedRange, setSelectedRange] = useState("Max");
@@ -883,6 +952,32 @@ export default function StockInfo() {
       }),
     );
   }, [storageKey, showSipControls, sipMode, sipAmount, sellUnits, sipActive]);
+
+  useEffect(() => {
+    if (!symbol) return;
+
+    let cancelled = false;
+    setHoldingsLoading(true);
+
+    axios
+      .get(`${API_BASE_URL}/holdings/${symbol}`)
+      .then((res) => {
+        if (cancelled) return;
+        const list = res.data?.holdings;
+        setHoldings(Array.isArray(list) ? list : []);
+      })
+      .catch(() => {
+        if (!cancelled) setHoldings([]);
+      })
+      .finally(() => {
+        if (!cancelled) setHoldingsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [symbol]);
+
   useEffect(() => {
     if (!symbol) return;
 
@@ -942,13 +1037,11 @@ export default function StockInfo() {
   const hasUnits = currentUnits > 0;
 
   useEffect(() => {
-    // The portfolio endpoint's `funds` entries never carry an `active`/
-    // `sipActive` flag (see portfolio.models.js) — the real source of truth
-    // for SIP status is the /sip/:schemeCode response (`sipData`). Deriving
-    // from that instead of localStorage means this is correct on any device,
-    // not just the one that last touched this SIP.
-    const backendActive = sipData?.isActive === true;
-    setSipActive(backendActive);
+    const backendActive = currentFund?.active ?? currentFund?.sipActive;
+
+    if (typeof backendActive === "boolean") {
+      setSipActive(backendActive);
+    }
 
     if (hasUnits || backendActive) {
       setShowSipControls(true);
@@ -956,7 +1049,7 @@ export default function StockInfo() {
       setShowSipControls(false);
       setSipMode("sip");
     }
-  }, [sipData, hasUnits]);
+  }, [currentFund?.active, currentFund?.sipActive, hasUnits]);
 
   const visibleHistory = useMemo(() => {
     if (!history.length) return [];
@@ -974,45 +1067,20 @@ export default function StockInfo() {
     return history.filter((h) => h.x >= cutoff);
   }, [history, selectedRange]);
 
+  const maxAssetPct = useMemo(
+    () => Math.max(1, ...holdings.map((h) => parseAssetPct(h.Assets))),
+    [holdings],
+  );
+
   const latestPoint = history.at(-1);
-
-  // Return over the currently-selected timeline: compares the NAV at the
-  // start of the visible window (x) against the NAV at the end (x ± y,
-  // where y is whatever the fund actually moved — not a fixed amount).
-  // isUp === false -> red, isUp === true -> green, null -> not enough data.
-  const periodReturn = useMemo(() => {
-    if (visibleHistory.length < 2) return null;
-
-    const startNav = visibleHistory[0].y;
-    const endNav = visibleHistory.at(-1).y;
-
-    if (!Number.isFinite(startNav) || startNav === 0) return null;
-
-    const diff = endNav - startNav; // this is "y" — can be any real number, +/-
-    const pct = (diff / startNav) * 100;
-
-    return {
-      startNav,
-      endNav,
-      diff,
-      pct,
-      isUp: diff >= 0,
-    };
-  }, [visibleHistory]);
-
-  const trend = periodReturn
-    ? periodReturn.isUp
-      ? TREND_COLORS.up
-      : TREND_COLORS.down
-    : TREND_COLORS.neutral;
 
   const chartData = {
     datasets: [
       {
         data: visibleHistory,
         parsing: { xAxisKey: "x", yAxisKey: "y" },
-        borderColor: trend.line,
-        backgroundColor: trend.fill,
+        borderColor: "#22d3ee",
+        backgroundColor: "rgba(34,211,238,0.03)",
         fill: true,
         tension: 0.25,
         pointRadius: 0,
@@ -1248,7 +1316,7 @@ export default function StockInfo() {
           <p className="text-slate-400 text-sm">Scheme Code: {symbol}</p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white/5 p-4 rounded-xl border border-white/10">
             <p className="text-xs text-slate-400">Latest NAV</p>
             <p className="text-cyan-300 font-semibold">
@@ -1282,23 +1350,6 @@ export default function StockInfo() {
               }
             >
               {txMessage || (sipActive ? "SIP active" : "Idle")}
-            </p>
-          </div>
-
-          <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-            <p className="text-xs text-slate-400">{selectedRange} Return</p>
-            <p
-              className="font-semibold"
-              style={{ color: trend.text }}
-              title={
-                periodReturn
-                  ? `₹${periodReturn.startNav.toFixed(2)} → ₹${periodReturn.endNav.toFixed(2)}`
-                  : undefined
-              }
-            >
-              {periodReturn
-                ? `${periodReturn.isUp ? "+" : ""}${periodReturn.diff.toFixed(2)} (${periodReturn.isUp ? "+" : ""}${periodReturn.pct.toFixed(2)}%)`
-                : "N/A"}
             </p>
           </div>
         </div>
@@ -1431,7 +1482,7 @@ export default function StockInfo() {
           </div>
         )}
 
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex flex-wrap gap-2">
           {RANGE_OPTIONS.map((range) => (
             <button
               key={range.label}
@@ -1445,16 +1496,6 @@ export default function StockInfo() {
               {range.label}
             </button>
           ))}
-
-          {periodReturn && (
-            <span
-              className={`ml-2 text-xs px-3 py-1 rounded-full border ${trend.badgeBorder} ${trend.badgeText} ${trend.badgeBg}`}
-            >
-              {periodReturn.isUp ? "▲" : "▼"}{" "}
-              {periodReturn.isUp ? "+" : ""}
-              {periodReturn.pct.toFixed(2)}%
-            </span>
-          )}
         </div>
 
         <div className="h-[300px] sm:h-[360px] md:h-[420px] bg-white/5 border border-white/10 rounded-xl p-4">
@@ -1470,6 +1511,80 @@ export default function StockInfo() {
         <p className="text-xs text-slate-500">
           Points loaded: {history.length}
         </p>
+
+        <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10">
+            <h2 className="text-lg font-semibold text-white">Holdings</h2>
+            {!holdingsLoading && holdings.length > 0 && (
+              <span className="text-xs text-slate-400">
+                {holdings.length} positions
+              </span>
+            )}
+          </div>
+
+          {holdingsLoading ? (
+            <div className="px-4 py-10 text-center text-slate-400 text-sm">
+              Loading holdings...
+            </div>
+          ) : holdings.length === 0 ? (
+            <div className="px-4 py-10 text-center text-slate-400 text-sm">
+              No holdings data available for this fund.
+            </div>
+          ) : (
+            <div className="max-h-[480px] overflow-auto">
+              <table className="w-full text-sm min-w-[640px]">
+                <thead className="sticky top-0 bg-slate-900/95 backdrop-blur text-xs text-slate-400">
+                  <tr className="border-b border-white/10">
+                    <th className="text-left font-medium px-4 py-3">Name</th>
+                    <th className="text-left font-medium px-4 py-3">Sector</th>
+                    <th className="text-left font-medium px-4 py-3">
+                      Instruments
+                    </th>
+                    <th className="text-right font-medium px-4 py-3">
+                      Assets
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {holdings.map((h, i) => {
+                    const pct = parseAssetPct(h.Assets);
+                    const width = Math.max(0, (pct / maxAssetPct) * 100);
+
+                    return (
+                      <tr
+                        key={h._id || `${h.Name}-${i}`}
+                        className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-slate-200">{h.Name}</td>
+                        <td className="px-4 py-3 text-slate-400">
+                          {h.Sector}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs px-2 py-1 rounded-full border border-white/10 bg-white/5 text-slate-300">
+                            {h.Instruments}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-3">
+                            <div className="hidden sm:block w-24 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-cyan-400/70"
+                                style={{ width: `${width}%` }}
+                              />
+                            </div>
+                            <span className="w-14 text-right font-semibold text-cyan-300 tabular-nums">
+                              {h.Assets}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
