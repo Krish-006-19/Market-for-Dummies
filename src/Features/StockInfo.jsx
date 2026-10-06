@@ -2117,7 +2117,7 @@ export default function StockInfo() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      await refreshSipData();
+      setSipData((prev) => (prev ? { ...prev, isActive: false } : prev));
       setSipActive(false);
       setSipMode("sip");
 
