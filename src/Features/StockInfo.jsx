@@ -1589,10 +1589,7 @@
 //     </div>
 //   );
 // }
-
-
-
-import { useContext, useState, useEffect, useMemo } from "react";
+import { useContext, useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { CursorContext } from "../contextAPI/Cursorcontext";
 import { AuthContext } from "../contextAPI/Authcontext";
@@ -1757,27 +1754,29 @@ export default function StockInfo() {
     return saved ? JSON.parse(saved).sellUnits : "";
   });
 
-  const [sipActive, setSipActive] = useState(() => {
-    const saved = localStorage.getItem(storageKey);
-    return saved ? JSON.parse(saved).sipActive : false;
-  });
+  // SIP status comes from the backend (/sip/:symbol), not localStorage,
+  // so it is correct on every device.
+  const [sipActive, setSipActive] = useState(false);
   const [txState, setTxState] = useState("idle");
   const [txMessage, setTxMessage] = useState("");
   const [selectedRange, setSelectedRange] = useState("Max");
   const [sipData, setSipData] = useState(null);
 
-  useEffect(() => {
+  const refreshSipData = useCallback(async () => {
     if (!token || !symbol) return;
-
-    axios
-      .get(`${API_BASE_URL}/sip/${symbol}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      .then((res) => setSipData(res.data))
-      .catch(() => setSipData(null));
+    try {
+      const res = await axios.get(`${API_BASE_URL}/sip/${symbol}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSipData(res.data);
+    } catch {
+      setSipData(null);
+    }
   }, [token, symbol]);
+
+  useEffect(() => {
+    refreshSipData();
+  }, [refreshSipData]);
 
   useEffect(() => {
     localStorage.setItem(
@@ -1876,11 +1875,8 @@ export default function StockInfo() {
   const hasUnits = currentUnits > 0;
 
   useEffect(() => {
-    const backendActive = currentFund?.active ?? currentFund?.sipActive;
-
-    if (typeof backendActive === "boolean") {
-      setSipActive(backendActive);
-    }
+    const backendActive = sipData?.isActive === true;
+    setSipActive(backendActive);
 
     if (hasUnits || backendActive) {
       setShowSipControls(true);
@@ -1888,7 +1884,7 @@ export default function StockInfo() {
       setShowSipControls(false);
       setSipMode("sip");
     }
-  }, [currentFund?.active, currentFund?.sipActive, hasUnits]);
+  }, [sipData, hasUnits]);
 
   const visibleHistory = useMemo(() => {
     if (!history.length) return [];
@@ -2089,6 +2085,7 @@ export default function StockInfo() {
         );
 
         setPortfolioData(res.data);
+        await refreshSipData();
         setSipActive(true);
         setShowSipControls(true);
         setSipMode("sip");
@@ -2120,6 +2117,7 @@ export default function StockInfo() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
+      await refreshSipData();
       setSipActive(false);
       setSipMode("sip");
 
@@ -2277,7 +2275,7 @@ export default function StockInfo() {
               </div>
             </div>
 
-            {sipActive && sipData?.isActive && sipData?.nextdate && (
+            {sipData?.isActive && sipData?.nextdate && (
               <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-3">
                 <p className="text-xs text-slate-400">Next SIP Payment</p>
                 <p className="text-cyan-300 font-semibold">
