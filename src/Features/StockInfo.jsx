@@ -808,7 +808,7 @@ export default function StockInfo() {
 
         <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
           <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10">
-            <h2 className="text-lg font-semibold text-white">Holdings</h2>
+            <h2 className="text-lg font-semibold text-white">Monthly Holdings</h2>
             {!holdingsLoading && holdings.length > 0 && (
               <span className="text-xs text-slate-400">
                 {holdings.length} positions
