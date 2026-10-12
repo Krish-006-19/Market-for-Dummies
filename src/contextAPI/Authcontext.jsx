@@ -26,6 +26,9 @@ export const AuthProvider = ({ children }) => {
 
   const [userId, setUserId] = useState(() => getCookie("userId") || null);
   const [authReady, setAuthReady] = useState(false);
+  // Whether the backend wants email OTP verification at signup.
+  // Defaults to true; the backend can switch it off with OTP_REQUIRED=false.
+  const [otpRequired, setOtpRequired] = useState(true);
 
   const navigateRef = useRef(null);
 
@@ -105,6 +108,24 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
 
+  useEffect(() => {
+    let cancelled = false;
+    axios
+      .get(`${API_BASE_URL}/user/config`)
+      .then((res) => {
+        if (!cancelled && typeof res.data?.otpRequired === "boolean") {
+          setOtpRequired(res.data.otpRequired);
+        }
+      })
+      .catch(() => {
+        // Keep the safe default (OTP required) if config can't be fetched.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+
   const login = async (email, password) => {
     try {
       const res = await axios.post(`${API_BASE_URL}/user/login`, {
@@ -131,12 +152,31 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (username, email, password) => {
+  const getOtp = async (email) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/user/getotp`, { email });
+
+      return {
+        success: true,
+        message: res.data?.message || "OTP sent successfully",
+        retryAfter: res.data?.retryAfter,
+      };
+    } catch (err) {
+      return {
+        success: false,
+        message: err.response?.data?.error || "Could not send OTP.",
+        retryAfter: err.response?.data?.retryAfter,
+      };
+    }
+  };
+
+  const register = async (username, email, password, userOTP) => {
     try {
       const res = await axios.post(`${API_BASE_URL}/user/register`, {
         username,
         email,
         password,
+        userOTP,
       });
 
       return {
@@ -169,7 +209,9 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated,
         authReady,
         navigateRef,
+        otpRequired,
         login,
+        getOtp,
         register,
         logout,
       }}

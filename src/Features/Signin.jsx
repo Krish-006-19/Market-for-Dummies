@@ -5,7 +5,8 @@ import { AuthContext } from "../contextAPI/Authcontext";
 
 function Signin() {
   const { cursorPos } = useContext(CursorContext);
-  const { login, register, isAuthenticated, authReady } = useContext(AuthContext);
+  const { login, register, getOtp, otpRequired, isAuthenticated, authReady } =
+    useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -15,6 +16,10 @@ function Signin() {
   const [username, setUsername] = useState("");
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
 
   const from = location.state?.from?.pathname || "/trade";
 
@@ -23,6 +28,19 @@ function Signin() {
       navigate(from, { replace: true });
     }
   }, [authReady, isAuthenticated, navigate, from]);
+
+  // Tick the "resend" countdown down once a second.
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(id);
+  }, [cooldown]);
+
+  const resetOtp = () => {
+    setOtp("");
+    setOtpSent(false);
+    setCooldown(0);
+  };
 
   const validateEmail = (email) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -34,6 +52,34 @@ function Signin() {
 
   const validateUsername = (username) => {
     return username.trim().length >= 3;
+  };
+
+  const handleSendOtp = async () => {
+    setError("");
+    setMsg("");
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setError("Enter your email first");
+      return;
+    }
+    if (!validateEmail(cleanEmail)) {
+      setError("Invalid email format");
+      return;
+    }
+
+    setSendingOtp(true);
+    const res = await getOtp(cleanEmail);
+    setSendingOtp(false);
+
+    if (res.success) {
+      setOtpSent(true);
+      setCooldown(res.retryAfter || 60);
+      setMsg(`OTP sent to ${cleanEmail}. It expires in 5 minutes.`);
+    } else {
+      if (res.retryAfter) setCooldown(res.retryAfter);
+      setError(res.message);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -65,6 +111,15 @@ function Signin() {
       return;
     }
 
+    if (!isLogin && otpRequired && !/^\d{6}$/.test(otp.trim())) {
+      setError(
+        otpSent
+          ? "Enter the 6-digit OTP sent to your email"
+          : "Click 'Send OTP' and enter the 6-digit code from your email"
+      );
+      return;
+    }
+
     if (isLogin) {
       const res = await login(cleanEmail, cleanPassword);
 
@@ -75,7 +130,12 @@ function Signin() {
         setError(res.message);
       }
     } else {
-      const res = await register(cleanUsername, cleanEmail, cleanPassword);
+      const res = await register(
+        cleanUsername,
+        cleanEmail,
+        cleanPassword,
+        otp.trim()
+      );
 
       if (res.success) {
         localStorage.setItem("email", cleanEmail);
@@ -83,6 +143,7 @@ function Signin() {
         setIsLogin(true);
         setPassword("");
         setUsername("");
+        resetOtp();
       } else {
         setError(res.message);
       }
@@ -133,10 +194,47 @@ function Signin() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (otpSent) resetOtp();
+                }}
                 className="w-full px-4 py-2 rounded-xl bg-white/50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
               />
             </div>
+
+            {!isLogin && otpRequired && (
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Email Verification Code
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    placeholder="6-digit OTP"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                    className="w-full px-4 py-2 rounded-xl bg-white/50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 tracking-widest"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={sendingOtp || cooldown > 0}
+                    className="shrink-0 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-bold shadow-lg hover:scale-105 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  >
+                    {sendingOtp
+                      ? "Sending..."
+                      : cooldown > 0
+                        ? `Resend in ${cooldown}s`
+                        : otpSent
+                          ? "Resend OTP"
+                          : "Send OTP"}
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium mb-1">Password</label>
@@ -164,6 +262,7 @@ function Signin() {
                 setIsLogin(!isLogin);
                 setError("");
                 setMsg("");
+                resetOtp();
               }}
               className="text-cyan-600 dark:text-cyan-400 font-semibold hover:underline"
             >
