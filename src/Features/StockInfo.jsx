@@ -588,7 +588,7 @@ export default function StockInfo() {
             <p className="text-xs text-slate-400">Units</p>
             <p>
               {Number(currentUnits || 0)
-                .toFixed(2)
+                .toFixed(7)
                 .replace(/\.00$/, "")}
             </p>
           </div>
