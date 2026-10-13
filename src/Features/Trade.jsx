@@ -1,276 +1,71 @@
-import { useContext, useEffect, useMemo, useState } from "react";
-import { CursorContext } from "../contextAPI/Cursorcontext";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../lib/api";
 import Navbar from "../components/Navbar";
 
-const BASE_API = API_BASE_URL;
-
 const CATEGORY_GROUPS = [
-  {
-    key: "flexi-cap",
-    title: "Equity Scheme - Flexi Cap Fund",
-    categories: [
-      "Equity Scheme - Flexi Cap Fund",
-      "Equity Schemes - Flexi Cap Fund",
-    ],
-  },
-  {
-    key: "large-cap",
-    title: "Equity Scheme - Large Cap / Large & Mid Cap Fund",
-    categories: [
-      "Equity Scheme - Large Cap Fund",
-      "Equity Schemes - Large Cap Fund",
-      "Equity Scheme - Large & Mid Cap Fund",
-      "Equity Schemes - Large & Mid Cap Fund",
-    ],
-  },
-  {
-    key: "mid-cap",
-    title: "Equity Scheme - Mid Cap Fund",
-    categories: [
-      "Equity Scheme - Mid Cap Fund",
-      "Equity Schemes - Mid Cap Fund",
-    ],
-  },
-  {
-    key: "hybrid",
-    title: "Hybrid Schemes",
-    categories: [
-      "Hybrid Scheme - Aggressive Hybrid Fund",
-      "Hybrid Schemes - Aggressive Hybrid Fund",
-      "Hybrid Scheme - Arbitrage Fund",
-      "Hybrid Schemes - Arbitrage Fund",
-      "Hybrid Scheme - Conservative Hybrid Fund",
-      "Hybrid Schemes - Conservative Hybrid Fund",
-      "Hybrid Scheme - Dynamic Asset Allocation or Balanced Advantage",
-      "Hybrid Schemes - Dynamic Asset Allocation or Balanced Advantage",
-      "Hybrid Scheme - Equity Savings",
-      "Hybrid Schemes - Equity Savings",
-    ],
-  },
-  {
-    key: "index",
-    title: "Other Scheme - Index Funds",
-    categories: [
-      "Other Scheme - Index Funds",
-      "Index Funds - Equity Funds",
-    ],
-  },
+  { key: "flexi-cap", title: "Flexi cap", description: "Flexible across market capitalisations", categories: ["Equity Scheme - Flexi Cap Fund", "Equity Schemes - Flexi Cap Fund"] },
+  { key: "large-cap", title: "Large cap & large-mid cap", description: "Established and large businesses", categories: ["Equity Scheme - Large Cap Fund", "Equity Schemes - Large Cap Fund", "Equity Scheme - Large & Mid Cap Fund", "Equity Schemes - Large & Mid Cap Fund"] },
+  { key: "mid-cap", title: "Mid cap", description: "Medium-sized listed businesses", categories: ["Equity Scheme - Mid Cap Fund", "Equity Schemes - Mid Cap Fund"] },
+  { key: "hybrid", title: "Hybrid funds", description: "A mix of equity and debt exposure", categories: ["Hybrid Scheme - Aggressive Hybrid Fund", "Hybrid Schemes - Aggressive Hybrid Fund", "Hybrid Scheme - Arbitrage Fund", "Hybrid Schemes - Arbitrage Fund", "Hybrid Scheme - Conservative Hybrid Fund", "Hybrid Schemes - Conservative Hybrid Fund", "Hybrid Scheme - Dynamic Asset Allocation or Balanced Advantage", "Hybrid Schemes - Dynamic Asset Allocation or Balanced Advantage", "Hybrid Scheme - Equity Savings", "Hybrid Schemes - Equity Savings"] },
+  { key: "index", title: "Index funds", description: "Designed to track a market index", categories: ["Other Scheme - Index Funds", "Index Funds - Equity Funds"] },
 ];
+const money = (value) => `₹${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
 
 function Trade() {
-  const { cursorPos } = useContext(CursorContext);
   const [funds, setFunds] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [openGroup, setOpenGroup] = useState(null);
   const [search, setSearch] = useState("");
-
+  const [activeGroup, setActiveGroup] = useState("all");
+  const [fetchError, setFetchError] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
+    let cancelled = false;
     const fetchFunds = async () => {
       try {
-        const res = await fetch(`${BASE_API}/`);
-
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-
-        const data = await res.json();
-
-        setFunds(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error("API error:", err);
-      } finally {
-        setLoading(false);
-      }
+        setFetchError("");
+        const response = await fetch(`${API_BASE_URL}/`);
+        if (!response.ok) throw new Error(`The fund service returned ${response.status}.`);
+        const data = await response.json();
+        if (!cancelled) setFunds(Array.isArray(data) ? data : []);
+      } catch (error) {
+        if (!cancelled) setFetchError(error.message || "Unable to load mutual fund schemes.");
+      } finally { if (!cancelled) setLoading(false); }
     };
-
     fetchFunds();
+    return () => { cancelled = true; };
   }, []);
 
-  const filteredFunds = useMemo(() => {
+  const categoryToGroup = useMemo(() => {
+    const map = new Map();
+    CATEGORY_GROUPS.forEach((group) => group.categories.forEach((category) => map.set(category, group.key)));
+    return map;
+  }, []);
+  const allGroups = [{ key: "all", title: "All schemes", description: "Browse every available fund", categories: [] }, ...CATEGORY_GROUPS];
+  const visibleFunds = useMemo(() => {
     const query = search.trim().toLowerCase();
-
-    if (!query) {
-      return funds;
-    }
-
     return funds.filter((fund) => {
       const code = String(fund["Scheme Code"] || "").toLowerCase();
       const name = String(fund["Scheme Name"] || "").toLowerCase();
-
-      return code.includes(query) || name.includes(query);
+      const queryMatch = !query || code.includes(query) || name.includes(query);
+      const categoryMatch = activeGroup === "all" || categoryToGroup.get(fund.category) === activeGroup;
+      return queryMatch && categoryMatch;
     });
-  }, [funds, search]);
-  const categoryToGroup = useMemo(() => {
-    const map = new Map();
+  }, [funds, search, activeGroup, categoryToGroup]);
+  const groupCount = (groupKey) => groupKey === "all" ? funds.length : funds.filter((fund) => categoryToGroup.get(fund.category) === groupKey).length;
 
-    for (const group of CATEGORY_GROUPS) {
-      for (const category of group.categories) {
-        map.set(category, group.key);
-      }
-    }
-
-    return map;
-  }, []);
-
-  const groupedFunds = useMemo(() => {
-    const map = Object.fromEntries(
-      CATEGORY_GROUPS.map((group) => [group.key, []])
-    );
-
-    for (const fund of filteredFunds) {
-      const groupKey = categoryToGroup.get(fund.category);
-
-      if (groupKey) {
-        map[groupKey].push(fund);
-      }
-    }
-
-    return map;
-  }, [filteredFunds, categoryToGroup]);
-
-  const handleRowClick = (code) => {
-    navigate(`/trade/stockinfo/${code}`);
-  };
-
-  const toggleGroup = (key) => {
-    setOpenGroup((prev) => (prev === key ? null : key));
-  };
-
-  return (
-    <div className="relative min-h-screen spg  bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-gray-900 dark:text-gray-100 font-sans transition duration-500">
-      <div
-        className="pointer-events-none fixed top-0 left-0 w-full h-full z-0"
-        style={{
-          background: `radial-gradient(
-            200px circle at ${cursorPos.x}px ${cursorPos.y}px,
-            rgba(59,130,246,0.25),
-            transparent 80%
-          )`,
-        }}
-      />
-
-      <Navbar />
-
-      <main className="relative z-1 max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-        <h2 className="text-2xl font-bold mb-4">All Mutual Fund Types</h2>
-
-        <div className="mb-6">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by scheme code or fund name..."
-            className="w-full px-4 py-3 rounded-lg bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-          />
-        </div>
-
-        {loading ? (
-          <p className="text-center text-gray-500">Loading data...</p>
-        ) : funds.length === 0 ? (
-          <p className="text-center text-gray-500">No funds found.</p>
-        ) : (
-          <div className="space-y-5">
-            {CATEGORY_GROUPS.map((group) => {
-              const list = groupedFunds[group.key] || [];
-              const isOpen = openGroup === group.key;
-
-              return (
-                <div
-                  key={group.key}
-                  className="bg-white dark:bg-slate-800 shadow-lg rounded-xl overflow-hidden"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleGroup(group.key)}
-                    className="w-full text-left px-5 py-4 flex items-center justify-between hover:bg-blue-50 dark:hover:bg-slate-700 transition"
-                  >
-                    <div>
-                      <h3 className="text-lg font-semibold">
-                        {group.title}
-                      </h3>
-
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {list.length} fund
-                        {list.length === 1 ? "" : "s"}
-                      </p>
-                    </div>
-
-                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                      {isOpen ? "Hide" : "Show"}
-                    </span>
-                  </button>
-
-                  {isOpen && (
-                    <div className="overflow-x-auto border-t border-gray-200 dark:border-slate-700">
-                      {list.length === 0 ? (
-                        <p className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400">
-                          No funds found in this category.
-                        </p>
-                      ) : (
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
-                          <thead className="bg-gray-100 dark:bg-slate-700">
-                            <tr>
-                              <th className="px-4 py-3 text-left text-sm font-semibold">
-                                Scheme Code
-                              </th>
-
-                              <th className="px-4 py-3 text-left text-sm font-semibold">
-                                Scheme Name
-                              </th>
-
-                              <th className="px-4 py-3 text-left text-sm font-semibold">
-                                Net Asset Value
-                              </th>
-
-                              <th className="px-4 py-3 text-left text-sm font-semibold">
-                                Date
-                              </th>
-                            </tr>
-                          </thead>
-
-                          <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
-                            {list.map((fund) => (
-                              <tr
-                                key={fund["Scheme Code"]}
-                                className="cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition"
-                                onClick={() =>
-                                  handleRowClick(fund["Scheme Code"])
-                                }
-                              >
-                                <td className="px-4 py-2 text-sm">
-                                  {fund["Scheme Code"]}
-                                </td>
-
-                                <td className="py-2 text-sm">
-                                  {fund["Scheme Name"]}
-                                </td>
-
-                                <td className="px-2 py-2 text-sm font-medium text-green-600 dark:text-green-400">
-                                  ₹{fund["Net Asset Value"]}
-                                </td>
-
-                                <td className="px-6 py-2 text-xs">
-                                  {fund["Date"]}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </main>
+  return <div className="mfd-page"><Navbar/><main className="page-container page-content">
+    <div className="page-header"><div><span className="eyebrow">Mutual fund explorer</span><h1>Find a fund to learn about</h1><p>Browse scheme names, review the latest available NAV and open a fund to study its history, holdings and SIP options.</p></div><div className="data-freshness"><span className="freshness-dot"/> </div></div>
+    <section className="explorer-summary"><div className="explorer-summary-icon">↗</div><div><strong>Explore before you invest</strong><p>This is a paper-trading environment. Opening a scheme lets you inspect its information and practise with virtual funds — no real order is placed.</p></div><span className="tag">Learning mode</span></section>
+    <div className="explorer-layout">
+      <aside className="category-sidebar surface"><div className="category-sidebar-heading"><h2>Fund categories</h2><span>{funds.length || "—"}</span></div><div className="category-options">{allGroups.map((group) => <button type="button" key={group.key} onClick={() => setActiveGroup(group.key)} className={`category-option ${activeGroup === group.key ? "selected" : ""}`}><span className="category-option-marker">{group.key === "all" ? "◫" : group.key === "flexi-cap" ? "↗" : group.key === "large-cap" ? "◈" : group.key === "mid-cap" ? "◉" : group.key === "hybrid" ? "◇" : "⌁"}</span><span className="category-option-copy"><strong>{group.title}</strong><small>{group.description}</small></span><span className="category-count">{groupCount(group.key)}</span></button>)}</div><div className="category-sidebar-note"><span>ⓘ</span><p>Different fund categories can carry different levels of market risk. Understand the scheme before acting.</p></div></aside>
+      <section className="fund-results surface"><div className="fund-results-top"><div><h2>{allGroups.find((group) => group.key === activeGroup)?.title || "Available schemes"}</h2><p>{loading ? "Refreshing scheme list…" : `${visibleFunds.length.toLocaleString("en-IN")} scheme${visibleFunds.length === 1 ? "" : "s"} available in this view`}</p></div><label className="fund-search-wrap"><span>⌕</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by scheme name or code" aria-label="Search schemes"/><kbd>↵</kbd></label></div>
+        {loading ? <div className="loading-state">Loading available schemes…</div> : fetchError ? <div className="explorer-error"><div className="empty-icon">!</div><h3>Fund data is temporarily unavailable</h3><p>{fetchError}</p><button type="button" className="secondary-button" onClick={() => window.location.reload()}>Reload schemes</button></div> : visibleFunds.length === 0 ? <div className="empty-state"><div className="empty-icon">⌕</div><h3>No matching schemes</h3><p>Try a different scheme name or switch to another category.</p><button type="button" className="secondary-button" onClick={() => { setSearch(""); setActiveGroup("all"); }}>Clear filters</button></div> : <><div className="table-wrap fund-table-wrap"><table className="data-table fund-list-table"><thead><tr><th>Scheme</th><th>Latest NAV</th><th>NAV date</th><th></th></tr></thead><tbody>{visibleFunds.map((fund) => <tr className="fund-row-clickable" key={fund["Scheme Code"]} onClick={() => navigate(`/trade/stockinfo/${fund["Scheme Code"]}`)} tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter") navigate(`/trade/stockinfo/${fund["Scheme Code"]}`); }}><td><div className="fund-table-name"><span className="fund-monogram fund-monogram-green">{String(fund["Scheme Name"] || "M").replace(/[^A-Za-z]/g, "").slice(0, 1).toUpperCase() || "M"}</span><span><strong>{fund["Scheme Name"] || "Unnamed scheme"}</strong><small>Code {fund["Scheme Code"]}</small></span></div></td><td className="number-cell nav-cell">{money(fund["Net Asset Value"])}</td><td className="number-cell nav-date-cell">{fund["Date"] || "—"}</td><td><span className="row-open">View details <b>→</b></span></td></tr>)}</tbody></table></div><div className="fund-results-footer"><span>Showing {visibleFunds.length.toLocaleString("en-IN")} of {funds.length.toLocaleString("en-IN")} schemes</span><span>NAV values may be delayed by the source update schedule.</span></div></>}
+      </section>
     </div>
-  );
+    <p className="disclaimer-note">Mutual fund values and scheme data are displayed for educational purposes. MFD does not accept real investments or provide personalised investment recommendations.</p>
+  </main></div>;
 }
 
 export default Trade;

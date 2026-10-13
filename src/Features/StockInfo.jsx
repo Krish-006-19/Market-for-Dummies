@@ -1,6 +1,5 @@
 import { useContext, useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { CursorContext } from "../contextAPI/Cursorcontext";
 import { AuthContext } from "../contextAPI/Authcontext";
 import { Line } from "react-chartjs-2";
 import axios from "axios";
@@ -70,9 +69,9 @@ const parseAssetPct = (value) => {
 // Shared by the Return stat card, the chart line/fill, and the % badge.
 const TREND_COLORS = {
   up: {
-    text: "#34d399",
-    line: "#34d399",
-    fill: "rgba(52,211,153,0.08)",
+    text: "#23744b",
+    line: "#2d8158",
+    fill: "rgba(45,129,88,0.09)",
     badgeBorder: "border-emerald-400/30",
     badgeText: "text-emerald-300",
     badgeBg: "bg-emerald-500/10",
@@ -87,8 +86,8 @@ const TREND_COLORS = {
   },
   neutral: {
     text: "#94a3b8",
-    line: "#22d3ee",
-    fill: "rgba(34,211,238,0.03)",
+    line: "#739b81",
+    fill: "rgba(115,155,129,0.04)",
     badgeBorder: "border-slate-500/30",
     badgeText: "text-slate-300",
     badgeBg: "bg-white/5",
@@ -128,7 +127,6 @@ const getFundFromPortfolio = (portfolio, symbol) => {
 };
 
 export default function StockInfo() {
-  const { cursorPos } = useContext(CursorContext);
   const { token } = useContext(AuthContext);
   const { symbol } = useParams();
   const navigate = useNavigate();
@@ -566,17 +564,11 @@ export default function StockInfo() {
       : !sipActive && (!sipAmount || Number(sipAmount) < 100));
 
   return (
-    <div className="min-h-screen spg bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
+    <div className="mfd-page stock-page">
       <Navbar />
 
-      <div
-        className="pointer-events-none fixed inset-0"
-        style={{
-          background: `radial-gradient(300px circle at ${cursorPos.x}px ${cursorPos.y}px, rgba(34,211,238,0.12), transparent 80%)`,
-        }}
-      />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 relative z-10 space-y-6">
+      <main className="stock-content page-container page-content space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-cyan-300">
             {fundMeta?.["Scheme Name"] || "Fund Details"}
@@ -687,7 +679,7 @@ export default function StockInfo() {
             {sipData?.isActive && sipData?.nextdate && (
               <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-3">
                 <p className="text-xs text-slate-400">Next SIP Payment</p>
-                <p className="text-cyan-300 font-semibold">
+                <p className="text-white font-semibold">
                   {new Date(sipData.nextdate).toLocaleDateString("en-IN", {
                     day: "numeric",
                     month: "long",
@@ -879,7 +871,7 @@ export default function StockInfo() {
             </div>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
