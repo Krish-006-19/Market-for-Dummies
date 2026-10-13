@@ -34,7 +34,7 @@ function Navbar() {
   ];
   const publicLinks = [
     { to: "/trade", label: "Explore funds" },
-    { to: "/#how-it-works", label: "How it works" },
+    // { to: "/#how-it-works", label: "How it works" },
   ];
   const visibleLinks = isAuthenticated ? navLinks : publicLinks;
 
